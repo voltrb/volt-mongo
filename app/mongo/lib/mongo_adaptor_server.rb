@@ -20,6 +20,9 @@ module Volt
       end
 
       def update(collection, values)
+        values = values.stringify_keys
+
+        to_mongo_id!(values)
         # TODO: Seems mongo is dumb and doesn't let you upsert with custom id's
         begin
           @db[collection].insert(values)
@@ -28,8 +31,8 @@ module Volt
           if error.message[/^11000[:]/]
             # Update because the id already exists
             update_values = values.dup
-            id = update_values.delete(:_id)
-            @db[collection].update({ _id: id }, update_values)
+            id = update_values.delete('_id')
+            @db[collection].update({ '_id' => id }, update_values)
           else
             return { error: error.message }
           end
@@ -39,9 +42,9 @@ module Volt
       end
 
       def query(collection, query)
-        allowed_methods = %w(find skip limit)
+        allowed_methods = %w(find skip limit count)
 
-        cursor = @db[collection]
+        result = @db[collection]
 
         query.each do |query_part|
           method_name, *args = query_part
@@ -50,19 +53,63 @@ module Volt
             fail "`#{method_name}` is not part of a valid query"
           end
 
-          cursor = cursor.send(method_name, *args)
+          args = args.map do |arg|
+            if arg.is_a?(Hash)
+              arg = arg.stringify_keys
+            end
+            arg
+          end
+
+          if method_name == 'find' && args.size > 0
+            qry = args[0]
+            to_mongo_id!(qry)
+          end
+
+          result = result.send(method_name, *args)
         end
 
-        cursor.to_a
+        if result.is_a?(::Mongo::Cursor)
+          result = result.to_a.map do |hash|
+            # Return id instead of _id
+            to_volt_id!(hash)
+
+            # Volt expects symbol keys
+            hash.symbolize_keys
+          end#.tap {|v| puts "QUERY: " + v.inspect }
+        end
+
+        result
       end
 
       def delete(collection, query)
+        if query.key?('id')
+          query['_id'] = query.delete('id')
+        end
+
         @db[collection].remove(query)
       end
 
       def drop_database
         db.connection.drop_database(Volt.config.db_name)
       end
+
+
+      private
+      # Mutate a hash to use id instead of _id
+      def to_volt_id!(hash)
+        if hash.key?('_id')
+          # Run to_s to convert BSON::Id also
+          hash['id'] = hash.delete('_id').to_s
+        end
+      end
+
+      # Mutate a hash to use _id instead of id
+      def to_mongo_id!(hash)
+        if hash.key?('id')
+          hash['_id'] = hash.delete('id')
+        end
+      end
+
     end
   end
 end

@@ -1,7 +1,7 @@
 module Volt
   class DataStore
     class MongoAdaptorClient < BaseAdaptorClient
-      data_store_methods :find, :where, :skip, :order, :limit
+      data_store_methods :find, :where, :skip, :order, :limit#, :count
 
       module MongoArrayStore
         # Find takes a query object
@@ -22,7 +22,7 @@ module Volt
       Volt::Persistors::ArrayStore.send(:remove_method, :order)
 
       # include mongo's methods on ArrayStore
-      Volt::Persistors::ArrayStore.include(MongoArrayStore)
+      Volt::Persistors::ArrayStore.send(:include, MongoArrayStore)
 
       def self.normalize_query(query)
         query = merge_finds_and_move_to_front(query)
