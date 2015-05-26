@@ -39,7 +39,7 @@ module Volt
       end
 
       def query(collection, query)
-        allowed_methods = %w(find skip limit)
+        allowed_methods = %w(find skip limit sort)
 
         cursor = @db[collection]
 
