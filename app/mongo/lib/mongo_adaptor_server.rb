@@ -1,5 +1,18 @@
 require 'mongo'
 
+# We need to be able to deeply stringify keys for mongo
+class Hash
+  def nested_stringify_keys
+    self.stringify_keys.map do |key, value|
+      if value.is_a?(Hash)
+        value = value.nested_stringify_keys
+      end
+
+      [key, value]
+    end.to_h
+  end
+end
+
 module Volt
   class DataStore
     class MongoAdaptorServer < BaseAdaptorServer
@@ -20,7 +33,7 @@ module Volt
       end
 
       def update(collection, values)
-        values = values.stringify_keys
+        values = values.nested_stringify_keys
 
         to_mongo_id!(values)
         # TODO: Seems mongo is dumb and doesn't let you upsert with custom id's

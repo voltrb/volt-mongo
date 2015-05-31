@@ -1,7 +1,7 @@
 module Volt
   class DataStore
     class MongoAdaptorClient < BaseAdaptorClient
-      data_store_methods :find, :where, :skip, :order, :limit#, :count
+      data_store_methods :find, :where, :skip, :order, :limit, :count
 
       module MongoArrayStore
         # Find takes a query object
@@ -13,6 +13,10 @@ module Volt
         # .sort is already a ruby method, so we use order instead
         def order(sort)
           add_query_part(:sort, sort)
+        end
+
+        def count
+          add_query_part(:count).then
         end
       end
 
