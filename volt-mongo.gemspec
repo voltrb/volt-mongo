@@ -20,7 +20,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency 'mongo', '~> 1.9.0'
-
-  spec.add_development_dependency "volt", "~> 0.9.2"
   spec.add_development_dependency "rake"
 end
