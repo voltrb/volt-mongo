@@ -18,7 +18,21 @@ module Volt
     class MongoAdaptorServer < BaseAdaptorServer
       attr_reader :db, :mongo_db
 
-      def initialize
+      # check if the database can be connected to.
+      # @return Boolean
+      def connected?
+        begin
+          db
+
+          true
+        rescue ::Mongo::ConnectionFailure => e
+          false
+        end
+      end
+
+      def db
+        return @db if @db
+
         if Volt.config.db_uri.present?
           @mongo_db ||= ::Mongo::MongoClient.from_uri(Volt.config.db_uri)
           @db ||= @mongo_db.db(Volt.config.db_uri.split('/').last || Volt.config.db_name)
@@ -26,10 +40,12 @@ module Volt
           @mongo_db ||= ::Mongo::MongoClient.new(Volt.config.db_host, Volt.config.db_port)
           @db ||= @mongo_db.db(Volt.config.db_name)
         end
+
+        @db
       end
 
       def insert(collection, values)
-        @db[collection].insert(values)
+        db[collection].insert(values)
       end
 
       def update(collection, values)
@@ -38,14 +54,14 @@ module Volt
         to_mongo_id!(values)
         # TODO: Seems mongo is dumb and doesn't let you upsert with custom id's
         begin
-          @db[collection].insert(values)
+          db[collection].insert(values)
         rescue ::Mongo::OperationFailure => error
           # Really mongo client?
           if error.message[/^11000[:]/]
             # Update because the id already exists
             update_values = values.dup
             id = update_values.delete('_id')
-            @db[collection].update({ '_id' => id }, update_values)
+            db[collection].update({ '_id' => id }, update_values)
           else
             return { error: error.message }
           end
@@ -57,7 +73,7 @@ module Volt
       def query(collection, query)
         allowed_methods = %w(find skip limit count)
 
-        result = @db[collection]
+        result = db[collection]
 
         query.each do |query_part|
           method_name, *args = query_part
@@ -99,7 +115,12 @@ module Volt
           query['_id'] = query.delete('id')
         end
 
-        @db[collection].remove(query)
+        db[collection].remove(query)
+      end
+
+      # remove the collection entirely
+      def drop_collection(collection)
+        db.drop_collection(collection)
       end
 
       def drop_database
