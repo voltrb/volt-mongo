@@ -71,7 +71,7 @@ module Volt
       end
 
       def query(collection, query)
-        allowed_methods = %w(find skip limit count)
+        allowed_methods = %w(find skip limit sort)
 
         result = db[collection]
 
