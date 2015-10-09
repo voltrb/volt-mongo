@@ -25,7 +25,7 @@ module Volt
           db
 
           true
-        rescue ::Mongo::ConnectionFailure => e
+        rescue ::Mongo::Error => e
           false
         end
       end
