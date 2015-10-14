@@ -1,4 +1,5 @@
 require 'mongo'
+require 'volt/utils/data_transformer'
 
 # We need to be able to deeply stringify keys for mongo
 class Hash
@@ -50,6 +51,13 @@ module Volt
 
       def update(collection, values)
         values = values.nested_stringify_keys
+        values = Volt::DataTransformer.transform(values) do |value|
+          if defined?(Volt::VoltTime) && value.is_a?(Volt::VoltTime)
+            value.to_time
+          else
+            value
+          end
+        end
 
         to_mongo_id!(values)
         # TODO: Seems mongo is dumb and doesn't let you upsert with custom id's
