@@ -71,6 +71,10 @@ module Volt
       end
 
       def query(collection, query)
+        if ENV['DB_LOG'] && collection.to_s != 'active_volt_instances'
+          Volt.logger.info("Query: #{collection}: #{query.inspect}")
+        end
+
         allowed_methods = %w(find skip limit sort)
 
         result = db[collection]
