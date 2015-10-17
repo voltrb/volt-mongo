@@ -57,7 +57,7 @@ module Volt
           db[collection].insert_one(values)
         rescue => error
           # Really mongo client?
-          if error.message[/^E11000/]
+          if error.message[/^E11000/] && error.message['$_id_']
             # Update because the id already exists
             update_values = values.dup
             id = update_values.delete('_id')
@@ -101,7 +101,7 @@ module Volt
           result = result.send(method_name, *args)
         end
 
-        if result.is_a?(::Mongo::Cursor)
+        if result.is_a?(::Mongo::Collection::View)
           result = result.to_a.map do |hash|
             # Return id instead of _id
             to_volt_id!(hash)
