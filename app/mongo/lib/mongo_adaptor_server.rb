@@ -25,7 +25,7 @@ module Volt
           db
 
           true
-        rescue ::Mongo::ConnectionFailure => e
+        rescue ::Mongo::Error => e
           false
         end
       end
@@ -34,18 +34,18 @@ module Volt
         return @db if @db
 
         if Volt.config.db_uri.present?
-          @mongo_db ||= ::Mongo::MongoClient.from_uri(Volt.config.db_uri)
-          @db ||= @mongo_db.db(Volt.config.db_uri.split('/').last || Volt.config.db_name)
+          db_name = Volt.config.db_uri.split('/').last || Volt.config.db_name
+          @db ||= ::Mongo::Client.new(Volt.config.db_uri, database: db_name, :monitoring => false)
         else
-          @mongo_db ||= ::Mongo::MongoClient.new(Volt.config.db_host, Volt.config.db_port)
-          @db ||= @mongo_db.db(Volt.config.db_name)
+          db_name = Volt.config.db_name
+          @db ||= ::Mongo::Client.new("mongodb://#{Volt.config.db_host}:#{Volt.config.db_port}", database: db_name, :monitoring => false)
         end
 
         @db
       end
 
       def insert(collection, values)
-        db[collection].insert(values)
+        db[collection].insert_one(values)
       end
 
       def update(collection, values)
@@ -54,14 +54,14 @@ module Volt
         to_mongo_id!(values)
         # TODO: Seems mongo is dumb and doesn't let you upsert with custom id's
         begin
-          db[collection].insert(values)
-        rescue ::Mongo::OperationFailure => error
+          db[collection].insert_one(values)
+        rescue => error
           # Really mongo client?
-          if error.message[/^11000[:]/]
+          if error.message[/^E11000/]
             # Update because the id already exists
             update_values = values.dup
             id = update_values.delete('_id')
-            db[collection].update({ '_id' => id }, update_values)
+            db[collection].update_one({ '_id' => id }, update_values)
           else
             return { error: error.message }
           end
@@ -119,18 +119,21 @@ module Volt
           query['_id'] = query.delete('id')
         end
 
-        db[collection].remove(query)
+        db[collection].delete_one(query)
       end
 
       # remove the collection entirely
       def drop_collection(collection)
-        db.drop_collection(collection)
+        db[collection].drop
       end
 
       def drop_database
-        db.connection.drop_database(Volt.config.db_name)
+        db.database.drop
       end
 
+      def adapter_version
+        ::Mongo::VERSION
+      end
 
       private
       # Mutate a hash to use id instead of _id
