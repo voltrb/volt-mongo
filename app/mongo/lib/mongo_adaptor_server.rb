@@ -57,7 +57,8 @@ module Volt
           db[collection].insert_one(values)
         rescue => error
           # Really mongo client?
-          if error.message[/^E11000/] && error.message['$_id_']
+          msg = error.message
+          if (msg[/^E11000/] || msg[/^insertDocument :: caused by :: 11000 E11000/]) && msg['$_id_']
             # Update because the id already exists
             update_values = values.dup
             id = update_values.delete('_id')
