@@ -52,7 +52,7 @@ module Volt
       def update(collection, values)
         values = values.nested_stringify_keys
         values = Volt::DataTransformer.transform(values) do |value|
-          if defined?(Volt::VoltTime) && value.is_a?(Volt::VoltTime)
+          if defined?(VoltTime) && value.is_a?(VoltTime)
             value.to_time
           else
             value
@@ -116,8 +116,8 @@ module Volt
          end
 
         values = Volt::DataTransformer.transform(result) do |value|
-          if defined?(Volt::VoltTime) && value.is_a?(Time)
-            value = Volt::VoltTime.from_time(value)
+          if defined?(VoltTime) && value.is_a?(Time)
+            value = VoltTime.from_time(value)
           else
             value
           end
