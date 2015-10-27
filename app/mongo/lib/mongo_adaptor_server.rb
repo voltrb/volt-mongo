@@ -118,7 +118,7 @@ module Volt
             # Volt expects symbol keys
             hash.symbolize_keys
           end#.tap {|v| puts "QUERY: " + v.inspect }
-         end
+        end
 
         values = Volt::DataTransformer.transform(result) do |value|
           if defined?(VoltTime) && value.is_a?(Time)
